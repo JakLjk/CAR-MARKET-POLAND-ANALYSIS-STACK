@@ -1,14 +1,15 @@
 [project]
-name = "car-market-poland-analysis-stack"
+name = "car_market_poland_analysis_stack"
 version = "0.1.0"
 description = ""
 authors = [
     {name = "Pomeran",email = "lejk99@icloud.com"}
 ]
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.11, <3.13"
 dependencies = [
-    "requests (>=2.32.5,<3.0.0)"
+    "requests (>=2.32.5,<3.0.0)",
+    "apache-airflow (>=3.0.6,<4.0.0)"
 ]
 
 
