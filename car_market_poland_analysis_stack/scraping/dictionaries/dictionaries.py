@@ -4,8 +4,9 @@ import json
 from enum import Enum
 import logging
 
-from .ssl_v1_adapter import SSLv1Adapter
+from scraping.ssl_v1_adapter import SSLv1Adapter
 
+logger = logging.getLogger(__name__)
 
 DICTIONARY_URL = "https://api.cepik.gov.pl/slowniki/{dict_name}"
 
@@ -18,8 +19,9 @@ class Dictionary(Enum):
     SPOSOB_PRODUKCJI = "sposob-produkcji"
 
 def get_dictionary(
-        dict_name:Dictionary,
-        save_to_file=None):
+        dict_name:Dictionary
+    ):
+    logger.info(f"Fetching dictionary {dict_name.name}")
     session = requests.session()
     session.mount("https://", SSLv1Adapter())
     response = session.get(DICTIONARY_URL.format(
@@ -27,13 +29,19 @@ def get_dictionary(
         ))
     response.raise_for_status()
     data=response.json()
-    if save_to_file:
-        logging.info(f"Saving dictiorany to file: {save_to_file}")
-        os.makedirs(os.path.dirname(save_to_file) or ".", exist_ok=True)
-        with open(save_to_file, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        return None
-    else:
-        logging.info(f"Returning dictionary as json")
-        return data
+    logger.info(f"Returning dictionary json")
+    return data
+    
+
+def write_dictionary(
+        path:str, 
+        dictionary:dict) -> str:
+    logger.info(f"Saving dictionary to {path}")
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(json.dumps(dictionary, ensure_ascii=False, indent=2))
+    logger.info(f"Saved dictionary to {path}")
+    return path
+
+
     
