@@ -19,5 +19,13 @@ if __name__=="__main__":
 
     # )
     # write_ndjson("test.json", iterator)
+    HDFS_PATH = "hdfs://192.168.0.12:8020/cepik/bronze/test.json"
     d = get_dictionary(Dictionary.WOJEWODZTWA)
-    write_dictionary("test3.json", d)
+    # write_dictionary(HDFS_PATH, d)
+    # write_dictionary_hdfs_webhdfs(
+    #     "192.168.0.12",
+    #     9870,
+    #     "/cepik/bronze/wojewodztwa.json",
+    #     d,
+    #     user="thinkpad"
+    # )

@@ -6,6 +6,8 @@ import logging
 
 from scraping.ssl_v1_adapter import SSLv1Adapter
 
+import fsspec
+
 logger = logging.getLogger(__name__)
 
 DICTIONARY_URL = "https://api.cepik.gov.pl/slowniki/{dict_name}"
@@ -43,5 +45,3 @@ def write_dictionary(
     logger.info(f"Saved dictionary to {path}")
     return path
 
-
-    
