@@ -1,11 +1,7 @@
 from datetime import date
 
-# from car_market_poland_analysis_stack.scraping.vehicles import get_vehicle_information
-# from car_market_poland_analysis_stack.scraping.dictionaries import get_dictionary, Dictionary
-
 from car_market_poland_analysis_stack.scraping.vehicles.vehicles import get_vehicles, write_ndjson
-from car_market_poland_analysis_stack.scraping.dictionaries.dictionaries import get_dictionary, Dictionary, write_dictionary
-
+from car_market_poland_analysis_stack.scraping.dictionaries.get_raw_dictionaries import get_dictionary, Dictionary, write_dictionary
 
 if __name__=="__main__":
     # # get_vehicle_information(date(2025,8,20), date(2025,8,22), "04", save_to_file="test_veh2.json")
@@ -19,8 +15,8 @@ if __name__=="__main__":
 
     # )
     # write_ndjson("test.json", iterator)
-    HDFS_PATH = "hdfs://192.168.0.12:8020/cepik/bronze/test.json"
-    d = get_dictionary(Dictionary.WOJEWODZTWA)
+    # HDFS_PATH = "hdfs://192.168.0.12:8020/cepik/bronze/test.json"
+    # d = get_dictionary(Dictionary.WOJEWODZTWA)
     # write_dictionary(HDFS_PATH, d)
     # write_dictionary_hdfs_webhdfs(
     #     "192.168.0.12",
@@ -29,3 +25,4 @@ if __name__=="__main__":
     #     d,
     #     user="thinkpad"
     # )
+    pass
