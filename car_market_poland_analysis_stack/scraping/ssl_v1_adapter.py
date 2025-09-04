@@ -12,11 +12,10 @@ class SSLv1Adapter(HTTPAdapter):
 
 def requests_session_farbic(https_ssl_adapter:HTTPAdapter) -> requests.session:
     s = requests.session()
-    s.mount("https://", https_ssl_adapter)
     retries = Retry(
         total=5, backoff_factor=0.5,
         status_forcelist = [429, 500, 502, 5003, 504],
-        allowed_method = ["GET"]
+        allowed_methods = ["GET"]
     )
-    s.mount("https://", HTTPAdapter(max_retries=retries))
+    s.mount("https://", https_ssl_adapter(max_retries=retries))
     return s

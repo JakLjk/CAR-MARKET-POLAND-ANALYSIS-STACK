@@ -57,19 +57,19 @@ def save_dictionary_to_hdfs(ti, **context):
         key="local_save_path_dict_voivodeships")
     hdfs_data_path = p["bronze_hdfs_raw_voivodeships_data_path"]
     remote_fname = os.path.basename(local_file_save_path)
-    relative_hdfs_save_path = posixpath(hdfs_data_path, remote_fname)
+    relative_hdfs_save_path = posixpath.join(hdfs_data_path, remote_fname)
     if not local_file_save_path or not os.path.exists(local_file_save_path):
         raise FileNotFoundError(f"Path was not found: {local_file_save_path}")
     hook = WebHDFSHook(webhdfs_conn_id="conn-webhdfs")
     client = hook.get_conn()
     client.upload(relative_hdfs_save_path, local_file_save_path, overwrite=True)
-    fully_qualified_path = posixpath(HDFS_URI, relative_hdfs_save_path)
+    fully_qualified_path = posixpath.join(HDFS_URI, relative_hdfs_save_path)
     ti.xcom_push(key="hdfs_save_path_raw_dict_voivodeships", value=fully_qualified_path)
     logger.info(f"Saved dictionary to hdfs: {fully_qualified_path}")
 
 
 with DAG(
-    dag_id="cepik_dictionary_voivodeships",
+    dag_id="cepik_dictionary_voivodeships_6",
     default_args=default_dag_args,
     start_date=datetime(2025,8,30),
     schedule="@weekly",
@@ -102,7 +102,7 @@ with DAG(
     transform_raw_voivodeship_dict = SparkSubmitOperator(
         task_id="transform_raw_voivodeship_dict",
         conn_id="spark-conn",
-        application="/opt/airflow/libs/transformations/silver_save_dictionary_voivodeships_to_delta.py",
+        application="/opt/airflow/libs/cepik/transformations/silver_save_dictionary_voivodeships_to_delta.py",
         packages="io.delta:delta-spark_2.13:4.0.0",
         env_vars=common_spark_env_vars,
         conf=common_spark_conf,
@@ -120,7 +120,7 @@ with DAG(
     load_voivodeships_into_psql_db = SparkSubmitOperator(
         task_id="load_voivodeships_into_psql_db",
         conn_id="spark-conn",
-        application="/opt/airflow/libs/transformations/gold_save_dictionary_voivodeshipts_to_psql.py",
+        application="/opt/airflow/libs/cepik/transformations/gold_save_dictionary_voivodeshipts_to_psql.py",
         packages="io.delta:delta-spark_2.13:4.0.0,org.postgresql:postgresql:42.7.3",
         env_vars=common_spark_env_vars,
         conf=common_spark_conf,

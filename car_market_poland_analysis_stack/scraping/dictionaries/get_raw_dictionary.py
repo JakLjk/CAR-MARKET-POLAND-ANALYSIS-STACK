@@ -22,7 +22,7 @@ def get_dictionary(
         dict_name:Dictionary
     ):
     logger.info(f"Fetching dictionary {dict_name.name}")
-    session = requests_session_farbic()
+    session = requests_session_farbic(SSLv1Adapter)
     response = session.get(
         DICTIONARY_URL.format(
             dict_name=dict_name.value

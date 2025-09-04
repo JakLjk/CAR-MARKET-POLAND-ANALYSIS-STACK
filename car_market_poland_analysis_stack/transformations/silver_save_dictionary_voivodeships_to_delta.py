@@ -42,7 +42,7 @@ def flatten(df:DataFrame) -> DataFrame:
         F.col("rec.`wartosc-slownika`").alias("wartosc_slownika"),
         F.col("rec.`liczba-wystapien`").cast("bigint").alias("liczba_wystapien"),
     )
-    return flat.dropDuplicates("klucz_slownika")
+    return flat.dropDuplicates(["klucz_slownika"])
 
 
 
