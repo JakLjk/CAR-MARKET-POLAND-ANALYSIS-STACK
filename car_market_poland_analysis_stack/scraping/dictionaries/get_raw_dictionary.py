@@ -4,7 +4,7 @@ import json
 from enum import Enum
 import logging
 
-from .ssl_v1_adapter import SSLv1Adapter
+from cepik.scraping.ssl_v1_adapter import SSLv1Adapter, requests_session_farbic
 
 logger = logging.getLogger(__name__)
 
@@ -22,13 +22,17 @@ def get_dictionary(
         dict_name:Dictionary
     ):
     logger.info(f"Fetching dictionary {dict_name.name}")
-    session = requests.session()
-    session.mount("https://", SSLv1Adapter())
-    response = session.get(DICTIONARY_URL.format(
-        dict_name=dict_name.value
-        ))
+    session = requests_session_farbic()
+    response = session.get(
+        DICTIONARY_URL.format(
+            dict_name=dict_name.value
+        ),
+        timeout=(5, 20)
+        )
     response.raise_for_status()
     data=response.json()
+    if "data" not in data:
+        raise ValueError("Unexpected json response - 'data' key is missing.")
     logger.info(f"Returning dictionary json")
     return data
     
@@ -42,3 +46,6 @@ def write_dictionary(
         f.write(json.dumps(dictionary, ensure_ascii=False, indent=2))
     logger.info(f"Saved dictionary to {path}")
     return path
+
+
+    

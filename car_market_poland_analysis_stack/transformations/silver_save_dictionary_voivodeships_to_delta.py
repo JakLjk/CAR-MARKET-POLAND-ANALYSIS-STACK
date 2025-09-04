@@ -1,7 +1,7 @@
 from pyspark.sql import SparkSession, functions as F, types as T, DataFrame
-from delta.tables import DeltaTable
-from typing import List
 import argparse
+
+from schemas.dict_voivodeships_schema import raw_schema
 
 def build_spark() -> SparkSession:
     return (
@@ -11,20 +11,40 @@ def build_spark() -> SparkSession:
         .getOrCreate()
     )
 def read_json(spark:SparkSession, path:str) -> DataFrame:
-   return spark.read.option("multiline", True).json(path)
+   return spark.read.schema(raw_schema).option("multiline", True).json(path)
 
 def flatten(df:DataFrame) -> DataFrame:
-    return df.select(
-        F.col("data.id").alias("id_slownika"),
-        F.col("data.links.self").alias("link_do_slownika"),
-        F.explode("data.attributes.`dostepne-rekordy-slownika`").alias("rec")
-    ).select(
-        "id_slownika",
-        "link_do_slownika",
+    # return df.select(
+    #     F.col("data.id").alias("id_slownika"),
+    #     F.col("data.links.self").alias("link_do_slownika"),
+    #     F.explode("data.attributes.`dostepne-rekordy-slownika`").alias("rec")
+    # ).select(
+    #     "id_slownika",
+    #     "link_do_slownika",
+    #     F.col("rec.`klucz-slownika`").alias("klucz_slownika"),
+    #     F.col("rec.`wartosc-slownika`").alias("wartosc_slownika"),
+    #     F.col("rec.`liczba-wystapien`").alias("liczba_wystapien")
+    # )
+
+    exploded = (
+       df
+       .select(
+            F.col("data.id").alias("id_slownika"),
+            F.col("data.links.self").alias("link_do_slownika"),
+            F.col("data.attributes.`dostepne-rekordy-slownika`").alias("items")
+       )
+       .withColumn("rec", F.explode_outer("items"))
+    )
+    flat = exploded.select(
+       "id_slownika",
+       "link_do_slownika",
         F.col("rec.`klucz-slownika`").alias("klucz_slownika"),
         F.col("rec.`wartosc-slownika`").alias("wartosc_slownika"),
-        F.col("rec.`liczba-wystapien`").alias("liczba_wystapien")
+        F.col("rec.`liczba-wystapien`").cast("bigint").alias("liczba_wystapien"),
     )
+    return flat.dropDuplicates("klucz_slownika")
+
+
 
 def save_to_delta(df:DataFrame, delta_path:str, mode:str="overwrite") -> None:
     (

@@ -5,13 +5,13 @@ from datetime import date
 import logging
 from typing import Optional, Iterator, Iterable, Union
 
-from scraping.ssl_v1_adapter import SSLv1Adapter
+from .ssl_v1_adapter import SSLv1Adapter
 
 logger = logging.getLogger(__name__)
 
 VEHICLES_URL = "https://api.cepik.gov.pl/pojazdy"
 
-def get_vehicles(
+def iter_vehicles(
         date_from:date,
         date_to:date,
         voivodeship_code:str,
