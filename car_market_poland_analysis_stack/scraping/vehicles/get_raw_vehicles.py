@@ -5,7 +5,7 @@ from datetime import date
 import logging
 from typing import Optional, Iterator, Iterable, Union
 
-from .ssl_v1_adapter import SSLv1Adapter
+from cepik.scraping.ssl_v1_adapter import SSLv1Adapter, requests_session_farbic
 
 logger = logging.getLogger(__name__)
 
@@ -39,8 +39,7 @@ def iter_vehicles(
     owns = session is None
     if owns:
         logger.info("Creating own requests session with SSLv1 adapter")
-        session = requests.session()
-        session.mount("https://", SSLv1Adapter())
+        session = requests_session_farbic(SSLv1Adapter)
     try:
         while url:
             result = session.get(

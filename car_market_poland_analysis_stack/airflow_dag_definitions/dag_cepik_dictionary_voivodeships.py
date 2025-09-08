@@ -69,10 +69,10 @@ def save_dictionary_to_hdfs(ti, **context):
 
 
 with DAG(
-    dag_id="cepik_dictionary_voivodeships_6",
+    dag_id="cepik_dictionary_voivodeships_7",
     default_args=default_dag_args,
     start_date=datetime(2025,8,30),
-    schedule="@weekly",
+    schedule="@daily",
     catchup=False,
     params = {
         "bronze_hdfs_raw_voivodeships_data_path":"/cepik/bronze",
