@@ -22,8 +22,8 @@ logger = logging.getLogger(__name__)
 
 default_dag_args = {
     "owner":"pomeran",
-    "retries":5,
-    "retry_delay":timedelta(minutes=5)
+    "retries":10,
+    "retry_delay":timedelta(hours=1)
 }
 
 common_spark_env_vars = {"HADOOP_USER_NAME":"airflow"}
@@ -46,11 +46,12 @@ def _hdfs_save_path(hdfs_base_path:str, run_id:str, filename:str):
     return posixpath.join(hdfs_base_path, run_id, filename)
 
 with DAG(
-    dag_id="cepik_vehicles_v13",
+    dag_id="cepik_vehicles_current_v01",
     default_args=default_dag_args,
-    start_date=datetime(2025,8,30),
+    start_date=datetime(2025,9,1),
     schedule="@daily",
     catchup=False,
+    max_active_runs=1,
     params = {
         "postgres_connection":"conn-pg-cepik-db",
 
@@ -60,19 +61,28 @@ with DAG(
         FROM public.dict_voivodeships;
         """,
 
+        "call_upsert_vehicles_psql_function":
+        """
+        SELECT public.upsert_vehicles_from_stage() 
+        AS affected
+        """,
+
         "task_pool":"cepik_api_pool",
 
         "get_raw_data_offset_from_curr_day":-7,
         "get_raw_data_for_num_of_days":3,
 
-        "bronze_hdfs_raw_voivodeships_data_path":"/cepik/bronze",
+        "bronze_hdfs_raw_vehicles_data_path":"/cepik/bronze",
+        "psql_staging_vehicles_schema_table":"public.staging_vehicles"
     }
 ):
+
     @task
     def get_voivodeship_ids(sql:str, pg_conn_id:str):
         hook = PostgresHook.get_hook(pg_conn_id)
         rows = hook.get_records(sql=sql)
         return [str(r[0]) for r in rows]
+    
     
     @task(pool=FETCH_POOL)
     def download_raw_vehicle_json(voivodeship_code:str):
@@ -84,6 +94,8 @@ with DAG(
 
         date_to = run_date + timedelta(days=day_offset)
         date_from = date_to -timedelta(days=num_days)
+
+        logger.info(f"Scraping vehicle information from {str(date_from)} to {str(date_to)}")
         vehicle_iterator = iter_vehicles(
             date_from=date_from,
             date_to=date_to,
@@ -123,13 +135,53 @@ with DAG(
         return full_hdfs_path
 
         
-        
+    load_vehicles_into_psql_staging_table = SparkSubmitOperator(
+        task_id = "load_vehicles_into_psql_staging_table",
+        conn_id = "spark-conn",
+        application = "/opt/airflow/libs/cepik/transformations/load_vehicles_to_psql_stage.py",
+        packages="io.delta:delta-spark_2.13:4.0.0,org.postgresql:postgresql:42.7.3",
+        env_vars=common_spark_env_vars,
+        conf=common_spark_conf,
+        application_args=[
+            "--source_url",
+            "{{var.value['hdfs-data-path']}}{{params.bronze_hdfs_raw_vehicles_data_path}}/{{ds_nodash}}/",
 
+            "--sink_url",
+            "jdbc:postgresql://{{ conn['conn-pg-cepik-db'].host }}:{{ conn['conn-pg-cepik-db'].port or 5432 }}/{{ conn['conn-pg-cepik-db'].schema }}?sslmode={{ conn['conn-pg-cepik-db'].extra_dejson.get('sslmode','disable') }}&rewriteBatchedInserts={{ conn['conn-pg-cepik-db'].extra_dejson.get('rewriteBatchedInserts','true') }}",
+
+            "--psql_user",
+            "{{ conn['conn-pg-cepik-db'].login }}",
+
+            "--psql_password",
+            "{{ conn['conn-pg-cepik-db'].password }}",
+
+            "--psql_schema_table",
+            "{{ params.psql_staging_vehicles_schema_table }}",
+        ],
+        verbose=False
+    )
+
+    @task
+    def upsert_stg_vehicles_into_main_table(sql:str, pg_conn_id:str):
+        hook = PostgresHook.get_hook(pg_conn_id)
+        # explicit conenction
+        conn = hook.get_conn()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(sql)
+                affected_rows = cur.fetchone()[0]
+            conn.commit()
+        finally:
+            conn.close()
+        return affected_rows
+    
+        
     voivodeship_ids = get_voivodeship_ids(
         sql="{{ params.query_sql_voivodeships }}",
         pg_conn_id="{{ params.postgres_connection}}"
         )
     
+
     local_paths = (
         download_raw_vehicle_json
         .expand(voivodeship_code=voivodeship_ids)
@@ -138,9 +190,17 @@ with DAG(
     hdfs_paths = (
         save_local_data_to_hdfs
         .partial(
-            bronze_base="{{params.bronze_hdfs_raw_voivodeships_data_path}}"
+            bronze_base="{{params.bronze_hdfs_raw_vehicles_data_path}}"
             )
         .expand(local_path=local_paths)
     )
+
+    upsert_stg_to_main = upsert_stg_vehicles_into_main_table(
+        sql="{{params.call_upsert_vehicles_psql_function}}",
+        pg_conn_id="{{ params.postgres_connection}}"
+    )
+
+
+    voivodeship_ids >> local_paths >> hdfs_paths >> load_vehicles_into_psql_staging_table >> upsert_stg_to_main
 
 
