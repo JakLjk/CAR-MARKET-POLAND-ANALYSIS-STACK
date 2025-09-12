@@ -9,13 +9,13 @@ import posixpath
 import logging
 from datetime import timedelta, datetime, date
 
+from cepik.scraping.dictionaries.get_raw_dictionary import Dictionary, get_dictionary, write_dictionary
+
+
 HDFS_URI = Variable.get("hdfs-data-path")
 LOCAL_URI = Variable.get("local-data-path")
 
-from cepik.scraping.dictionaries.get_raw_dictionary import Dictionary, get_dictionary, write_dictionary
-
 logger = logging.getLogger(__name__)
-
 
 default_dag_args = {
     "owner":"pomeran",
@@ -69,7 +69,7 @@ def save_dictionary_to_hdfs(ti, **context):
 
 
 with DAG(
-    dag_id="cepik_dictionary_voivodeships_7",
+    dag_id="cepik_dictionary_voivodeships_8",
     default_args=default_dag_args,
     start_date=datetime(2025,8,30),
     schedule="@daily",

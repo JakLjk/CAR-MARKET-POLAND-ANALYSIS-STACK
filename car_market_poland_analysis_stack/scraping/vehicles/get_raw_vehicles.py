@@ -16,13 +16,17 @@ def iter_vehicles(
         date_to:date,
         voivodeship_code:str,
         session:Optional[requests.Session]=None,
-        request_timeout=60,
         show_all_fields:str="true",
-        show_only_registered_vehicles:str="true",
+        show_only_registered_vehicles:str="false",
         record_limit_per_page:Union[str,int]=500,
 ) -> Iterator[dict]:
     logger.info("Initialised vehicle iterator function")
-    
+    logger.info(
+        f"Starting generator for"
+        f"voivodeship: {voivodeship_code}"
+        f" from: {date_from.strftime("%d%m%Y")} to: {date_to.strftime("%d%m%Y")}"
+        )
+
     if date_from > date_to:
         raise ValueError("Incorrect date range")
     
@@ -45,14 +49,16 @@ def iter_vehicles(
             result = session.get(
                 url, 
                 params=params if use_params else None,
-                timeout=request_timeout )
+                timeout=(5, 20))
             result.raise_for_status()
-            payload = result.json()
-            rows = payload.get("data") or []
+            data = result.json()
+            if "data" not in data:
+                raise ValueError("Unexpected json response - 'data' key is missing.")
+            rows = data.get("data") or []
             for row in rows:
                 yield row
             use_params = False
-            url = (payload.get("links") or {}).get("next")
+            url = (data.get("links") or {}).get("next")
     finally:
         if owns:
             logger.info("Closing requests session")

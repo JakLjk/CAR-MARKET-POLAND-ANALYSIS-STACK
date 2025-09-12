@@ -15,7 +15,7 @@ from cepik.scraping.vehicles.get_raw_vehicles import iter_vehicles, write_ndjson
 
 CURSOR_CURRENTLY_SCRAPED_YEAR = "vehicle_year_cursor"
 START_YEAR = 1935
-END_YEAR = 2024
+END_YEAR = 2025
 
 HDFS_URI = Variable.get("hdfs-data-path")
 LOCAL_URI = Variable.get("local-data-path")
@@ -72,6 +72,9 @@ with DAG(
 
         "task_pool":"cepik_api_pool",
 
+        # "get_raw_data_offset_from_curr_day":-7,
+        # "get_raw_data_for_num_of_days":380,
+
         "bronze_hdfs_raw_vehicles_data_path":"/cepik/bronze",
         "psql_staging_vehicles_schema_table":"public.staging_vehicles"
     }
@@ -112,6 +115,13 @@ with DAG(
     @task(pool=FETCH_POOL)
     def download_raw_vehicle_json(voivodeship_code:str):
         context = get_current_context()
+        # run_stamp = context["ds_nodash"]
+        # run_date = context["logical_date"].date()
+        # day_offset = int(context["params"].get("get_raw_data_offset_from_curr_day"))
+        # num_days = int(context["params"].get("get_raw_data_for_num_of_days"))
+
+        # date_to = run_date + timedelta(days=day_offset)
+        # date_from = date_to -timedelta(days=num_days)
 
         year_info = context["ti"].xcom_pull(
             key="year_info",
